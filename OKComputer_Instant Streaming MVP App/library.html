@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Library - StreamFlow</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+        body { 
+            background: #1a1d29; 
+            color: #f8f9fa; 
+            overflow-x: hidden;
+        }
+        .hero-bg {
+            background: linear-gradient(135deg, #1a1d29 0%, #2c3e50 100%);
+            position: relative;
+        }
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .library-card {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .library-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 15px 30px rgba(0, 212, 255, 0.2);
+        }
+        .nav-link {
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        .nav-link:hover {
+            color: #00d4ff;
+        }
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: #00d4ff;
+            transition: width 0.3s ease;
+        }
+        .nav-link:hover::after {
+            width: 100%;
+        }
+        .nav-link.active {
+            color: #00d4ff;
+        }
+        .nav-link.active::after {
+            width: 100%;
+        }
+        .playlist-item {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .playlist-item:hover {
+            background: rgba(0, 212, 255, 0.1);
+            transform: translateX(8px);
+        }
+        .stats-card {
+            background: linear-gradient(135deg, rgba(0, 212, 255, 0.1), rgba(255, 107, 107, 0.1));
+            border: 1px solid rgba(0, 212, 255, 0.2);
+        }
+        .chart-container {
+            height: 300px;
+        }
+        .filter-tab {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .filter-tab:hover {
+            background: rgba(0, 212, 255, 0.1);
+        }
+        .filter-tab.active {
+            background: #00d4ff;
+            color: #1a1d29;
+        }
+        .song-row {
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        .song-row:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .empty-state {
+            opacity: 0.6;
+        }
+        .playlist-cover {
+            background: linear-gradient(45deg, #00d4ff, #ff6b6b);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="fixed top-0 left-0 right-0 z-50 glass-effect">
+        <div class="max-w-7xl mx-auto px-6 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-8">
+                    <h1 class="text-2xl font-bold text-white">StreamFlow</h1>
+                    <div class="hidden md:flex space-x-6">
+                        <a href="index.html" class="nav-link text-gray-300">Player</a>
+                        <a href="discover.html" class="nav-link text-gray-300">Discover</a>
+                        <a href="library.html" class="nav-link active text-white font-medium">Library</a>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div class="relative">
+                        <input 
+                            type="text" 
+                            id="librarySearch"
+                            placeholder="Search your library..."
+                            class="bg-white/10 text-white placeholder-gray-400 rounded-full px-6 py-2 w-64 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                        >
+                        <div id="librarySearchResults" class="absolute top-full mt-2 left-0 right-0 bg-gray-800 rounded-lg shadow-xl hidden z-50 max-h-96 overflow-y-auto">
+                        </div>
+                    </div>
+                    <button class="w-10 h-10 rounded-full bg-gradient-to-r from-blue-400 to-purple-500 flex items-center justify-center">
+                        <span class="text-white font-medium">U</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero-bg pt-24 pb-12">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="text-center mb-8">
+                <h2 class="text-5xl font-bold mb-4 text-white">Your Music Library</h2>
+                <p class="text-xl text-gray-300">Manage your collection, playlists, and listening history</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Library Stats -->
+    <section class="py-8">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <div class="stats-card rounded-2xl p-6 text-center">
+                    <div class="text-3xl font-bold text-blue-400 mb-2" id="totalSongs">156</div>
+                    <div class="text-gray-300">Saved Songs</div>
+                </div>
+                <div class="stats-card rounded-2xl p-6 text-center">
+                    <div class="text-3xl font-bold text-purple-400 mb-2" id="totalPlaylists">23</div>
+                    <div class="text-gray-300">Playlists</div>
+                </div>
+                <div class="stats-card rounded-2xl p-6 text-center">
+                    <div class="text-3xl font-bold text-green-400 mb-2" id="totalArtists">89</div>
+                    <div class="text-gray-300">Artists</div>
+                </div>
+                <div class="stats-card rounded-2xl p-6 text-center">
+                    <div class="text-3xl font-bold text-orange-400 mb-2" id="listeningTime">47h</div>
+                    <div class="text-gray-300">This Month</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Content -->
+    <section class="py-8">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                
+                <!-- Sidebar -->
+                <div class="lg:col-span-1">
+                    <!-- Filter Tabs -->
+                    <div class="glass-effect rounded-2xl p-4 mb-6">
+                        <h3 class="text-lg font-semibold mb-4 text-white">Library Sections</h3>
+                        <div class="space-y-2">
+                            <div class="filter-tab active px-4 py-3 rounded-lg text-sm font-medium" data-section="songs">
+                                <div class="flex items-center justify-between">
+                                    <span>Saved Songs</span>
+                                    <span class="text-xs bg-white/20 px-2 py-1 rounded-full" id="songsCount">156</span>
+                                </div>
+                            </div>
+                            <div class="filter-tab px-4 py-3 rounded-lg text-sm font-medium text-gray-300" data-section="playlists">
+                                <div class="flex items-center justify-between">
+                                    <span>Playlists</span>
+                                    <span class="text-xs bg-white/20 px-2 py-1 rounded-full" id="playlistsCount">23</span>
+                                </div>
+                            </div>
+                            <div class="filter-tab px-4 py-3 rounded-lg text-sm font-medium text-gray-300" data-section="artists">
+                                <div class="flex items-center justify-between">
+                                    <span>Artists</span>
+                                    <span class="text-xs bg-white/20 px-2 py-1 rounded-full" id="artistsCount">89</span>
+                                </div>
+                            </div>
+                            <div class="filter-tab px-4 py-3 rounded-lg text-sm font-medium text-gray-300" data-section="history">
+                                <div class="flex items-center justify-between">
+                                    <span>Recently Played</span>
+                                    <span class="text-xs bg-white/20 px-2 py-1 rounded-full" id="historyCount">50</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="glass-effect rounded-2xl p-4">
+                        <h3 class="text-lg font-semibold mb-4 text-white">Quick Actions</h3>
+                        <div class="space-y-2">
+                            <button class="w-full px-4 py-2 bg-blue-500 hover:bg-blue-600 rounded-lg text-white text-sm font-medium transition-colors" onclick="createPlaylist()">
+                                Create Playlist
+                            </button>
+                            <button class="w-full px-4 py-2 bg-purple-500 hover:bg-purple-600 rounded-lg text-white text-sm font-medium transition-colors" onclick="importMusic()">
+                                Import Music
+                            </button>
+                            <button class="w-full px-4 py-2 bg-green-500 hover:bg-green-600 rounded-lg text-white text-sm font-medium transition-colors" onclick="exportLibrary()">
+                                Export Library
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Main Content Area -->
+                <div class="lg:col-span-3">
+                    
+                    <!-- Songs Section -->
+                    <div id="songsSection" class="library-section">
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="text-2xl font-bold text-white">Saved Songs</h3>
+                            <div class="flex items-center space-x-4">
+                                <select id="sortSongs" class="bg-white/10 text-white rounded-lg px-4 py-2 text-sm">
+                                    <option value="recent">Recently Added</option>
+                                    <option value="title">Title A-Z</option>
+                                    <option value="artist">Artist A-Z</option>
+                                    <option value="genre">Genre</option>
+                                </select>
+                                <div class="flex bg-white/10 rounded-lg p-1">
+                                    <button class="px-3 py-1 text-sm bg-blue-500 text-white rounded-md" id="listView">List</button>
+                                    <button class="px-3 py-1 text-sm text-gray-300 hover:text-white" id="gridView">Grid</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Songs List -->
+                        <div class="glass-effect rounded-2xl overflow-hidden">
+                            <div class="p-4 border-b border-white/10">
+                                <div class="grid grid-cols-12 gap-4 text-sm text-gray-400 font-medium">
+                                    <div class="col-span-1">#</div>
+                                    <div class="col-span-5">Title</div>
+                                    <div class="col-span-3">Artist</div>
+                                    <div class="col-span-2">Genre</div>
+                                    <div class="col-span-1">Duration</div>
+                                </div>
+                            </div>
+                            <div id="songsList" class="divide-y divide-white/10">
+                                <!-- Content will be populated by JavaScript -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Playlists Section -->
+                    <div id="playlistsSection" class="library-section hidden">
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="text-2xl font-bold text-white">Your Playlists</h3>
+                            <button class="px-4 py-2 bg-blue-500 hover:bg-blue-600 rounded-lg text-white text-sm font-medium transition-colors" onclick="createPlaylist()">
+                                Create New Playlist
+                            </button>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="playlistsGrid">
+                            <!-- Content will be populated by JavaScript -->
+                        </div>
+                    </div>
+
+                    <!-- Artists Section -->
+                    <div id="artistsSection" class="library-section hidden">
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="text-2xl font-bold text-white">Following</h3>
+                            <div class="flex items-center space-x-4">
+                                <select id="sortArtists" class="bg-white/10 text-white rounded-lg px-4 py-2 text-sm">
+                                    <option value="name">Name A-Z</option>
+                                    <option value="recent">Recently Added</option>
+                                    <option value="songs">Most Songs</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6" id="artistsGrid">
+                            <!-- Content will be populated by JavaScript -->
+                        </div>
+                    </div>
+
+                    <!-- History Section -->
+                    <div id="historySection" class="library-section hidden">
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="text-2xl font-bold text-white">Recently Played</h3>
+                            <button class="px-4 py-2 bg-red-500 hover:bg-red-600 rounded-lg text-white text-sm font-medium transition-colors" onclick="clearHistory()">
+                                Clear History
+                            </button>
+                        </div>
+
+                        <div class="glass-effect rounded-2xl overflow-hidden">
+                            <div class="p-4 border-b border-white/10">
+                                <div class="grid grid-cols-12 gap-4 text-sm text-gray-400 font-medium">
+                                    <div class="col-span-1">#</div>
+                                    <div class="col-span-5">Title</div>
+                                    <div class="col-span-3">Artist</div>
+                                    <div class="col-span-2">Played</div>
+                                    <div class="col-span-1">Duration</div>
+                                </div>
+                            </div>
+                            <div id="historyList" class="divide-y divide-white/10">
+                                <!-- Content will be populated by JavaScript -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Listening Statistics -->
+                    <div class="mt-12">
+                        <h3 class="text-2xl font-bold mb-6 text-white">Your Listening Habits</h3>
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            <div class="glass-effect rounded-2xl p-6">
+                                <h4 class="text-lg font-semibold mb-4 text-white">Genre Distribution</h4>
+                                <div id="genreChart" class="chart-container"></div>
+                            </div>
+                            <div class="glass-effect rounded-2xl p-6">
+                                <h4 class="text-lg font-semibold mb-4 text-white">Listening Time</h4>
+                                <div id="timeChart" class="chart-container"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Player Bar (Shared) -->
+    <div class="fixed bottom-0 left-0 right-0 player-bar z-50" style="background: rgba(26, 29, 41, 0.95); backdrop-filter: blur(20px); border-top: 1px solid rgba(255, 255, 255, 0.1);">
+        <div class="max-w-7xl mx-auto px-6 py-4">
+            <div class="flex items-center justify-between">
+                <!-- Now Playing -->
+                <div class="flex items-center space-x-4 flex-1">
+                    <img id="currentAlbumArt" src="https://via.placeholder.com/60x60/4a5568/ffffff?text=♪" alt="Album Art" class="w-16 h-16 rounded-lg">
+                    <div>
+                        <h4 id="currentSong" class="font-semibold text-white">Select a song to play</h4>
+                        <p id="currentArtist" class="text-gray-400 text-sm">Artist</p>
+                    </div>
+                </div>
+
+                <!-- Player Controls -->
+                <div class="flex items-center space-x-6">
+                    <button id="shuffleBtn" class="text-gray-400 hover:text-white transition-colors">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M3.707 3.293a1 1 0 00-1.414 1.414l1.414-1.414zM15 12a1 1 0 10-2 0 1 1 0 002 0zM5.414 5.414L3.293 3.293 1.879 4.707 4 6.828l1.414-1.414zM7.414 7.414L5.293 5.293 3.879 6.707 6 8.828l1.414-1.414zM9.414 9.414L7.293 7.293 5.879 8.707 8 10.828l1.414-1.414zM11.414 11.414L9.293 9.293 7.879 10.707 10 12.828l1.414-1.414zM13.414 13.414L11.293 11.293 9.879 12.707 12 14.828l1.414-1.414z"/>
+                        </svg>
+                    </button>
+                    <button id="prevBtn" class="text-white hover:text-blue-400 transition-colors">
+                        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M8.445 14.832A1 1 0 0010 14v-2.798l5.445 3.63A1 1 0 0017 14V6a1 1 0 00-1.555-.832L10 8.798V6a1 1 0 00-1.555-.832l-6 4a1 1 0 000 1.664l6 4z"/>
+                        </svg>
+                    </button>
+                    <button id="playPauseBtn" class="w-12 h-12 bg-blue-500 hover:bg-blue-600 rounded-full flex items-center justify-center text-white transition-colors">
+                        <svg id="playIcon" class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M8 5v10l8-5-8-5z"/>
+                        </svg>
+                        <svg id="pauseIcon" class="w-6 h-6 hidden" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M5 4h3v12H5V4zm7 0h3v12h-3V4z"/>
+                        </svg>
+                    </button>
+                    <button id="nextBtn" class="text-white hover:text-blue-400 transition-colors">
+                        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M4.555 5.168A1 1 0 003 6v8a1 1 0 001.555.832L10 11.202V14a1 1 0 001.555.832l6-4a1 1 0 000-1.664l-6-4A1 1 0 0010 6v2.798L4.555 5.168z"/>
+                        </svg>
+                    </button>
+                    <button id="repeatBtn" class="text-gray-400 hover:text-white transition-colors">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Volume and Progress -->
+                <div class="flex items-center space-x-4 flex-1 justify-end">
+                    <span id="currentTime" class="text-gray-400 text-sm">0:00</span>
+                    <div class="w-64 relative">
+                        <div class="h-1 bg-gray-600 rounded-full cursor-pointer" id="progressBar">
+                            <div class="progress-bar h-full rounded-full" id="progressFill" style="width: 0%; background: linear-gradient(90deg, #00d4ff 0%, #ff6b6b 100%);"></div>
+                        </div>
+                    </div>
+                    <span id="totalTime" class="text-gray-400 text-sm">0:00</span>
+                    <div class="flex items-center space-x-2">
+                        <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.617.793L4.828 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.828l3.555-3.793A1 1 0 019.383 3.076zM15 8a1 1 0 011 1v2a1 1 0 01-1 1h-1.5a1 1 0 01-1-1V9a1 1 0 011-1H15z"/>
+                        </svg>
+                        <input type="range" id="volumeSlider" min="0" max="100" value="70" class="w-20 h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Audio Element -->
+    <audio id="audioPlayer" preload="metadata"></audio>
+
+    <script>
+        // Library page specific functionality
+        class LibraryPage {
+            constructor() {
+                this.currentSection = 'songs';
+                this.initializeLibrary();
+            }
+
+            initializeLibrary() {
+                this.setupSectionTabs();
+                this.setupSearch();
+                this.populateAllSections();
+                this.initializeCharts();
+            }
+
+            setupSectionTabs() {
+                document.querySelectorAll('.filter-tab').forEach(tab => {
+                    tab.addEventListener('click', () => {
+                        const section = tab.dataset.section;
+                        this.switchSection(section);
+                    });
+                });
+            }
+
+            switchSection(section) {
+                // Update tab states
+                document.querySelectorAll('.filter-tab').forEach(tab => {
+                    tab.classList.remove('active');
+                    tab.classList.add('text-gray-300');
+                });
+                document.querySelector(`[data-section="${section}"]`).classList.add('active');
+                document.querySelector(`[data-section="${section}"]`).classList.remove('text-gray-300');
+
+                // Show/hide sections
+                document.querySelectorAll('.library-section').forEach(sec => {
+                    sec.classList.add('hidden');
+                });
+                document.getElementById(`${section}Section`).classList.remove('hidden');
+
+                this.currentSection = section;
+            }
+
+            setupSearch() {
+                const searchInput = document.getElementById('librarySearch');
+                const searchResults = document.getElementById('librarySearchResults');
+                
+                searchInput.addEventListener('input', (e) => {
+                    const query = e.target.value;
+                    if (query) {
+                        this.performLibrarySearch(query, searchResults);
+                        searchResults.classList.remove('hidden');
+                    } else {
+                        searchResults.classList.add('hidden');
+                    }
+                });
+                
+                searchInput.addEventListener('blur', () => {
+                    setTimeout(() => searchResults.classList.add('hidden'), 200);
+                });
+            }
+
+            performLibrarySearch(query, container) {
+                if (!window.app || !window.app.musicCatalog) return;
+                
+                const results = window.app.musicCatalog.filter(track => 
+                    track.title.toLowerCase().includes(query.toLowerCase()) ||
+                    track.artist.toLowerCase().includes(query.toLowerCase()) ||
+                    track.album.toLowerCase().includes(query.toLowerCase()) ||
+                    track.genre.toLowerCase().includes(query.toLowerCase())
+                );
+
+                container.innerHTML = results.map(track => `
+                    <div class="p-3 border-b border-gray-700 last:border-b-0 cursor-pointer hover:bg-gray-700" onclick="window.app.playTrack(${track.id})">
+                        <div class="flex items-center space-x-3">
+                            <img src="${track.cover}" alt="${track.title}" class="w-12 h-12 rounded object-cover">
+                            <div class="flex-1 min-w-0">
+                                <h4 class="text-white font-medium truncate">${track.title}</h4>
+                                <p class="text-gray-400 text-sm truncate">${track.artist} • ${track.album}</p>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            populateAllSections() {
+                this.populateSongsSection();
+                this.populatePlaylistsSection();
+                this.populateArtistsSection();
+                this.populateHistorySection();
+            }
+
+            populateSongsSection() {
+                const container = document.getElementById('songsList');
+                if (!window.app || !window.app.musicCatalog) {
+                    container.innerHTML = this.renderEmptyState('No songs in your library yet');
+                    return;
+                }
+
+                const songs = window.app.musicCatalog;
+                container.innerHTML = songs.map((song, index) => `
+                    <div class="song-row p-4" onclick="window.app.playTrack(${song.id})">
+                        <div class="grid grid-cols-12 gap-4 items-center">
+                            <div class="col-span-1 text-gray-400 text-sm">${index + 1}</div>
+                            <div class="col-span-5 flex items-center space-x-3">
+                                <img src="${song.cover}" alt="${song.title}" class="w-10 h-10 rounded object-cover">
+                                <div class="min-w-0">
+                                    <h4 class="text-white font-medium truncate">${song.title}</h4>
+                                    <p class="text-gray-400 text-sm truncate">${song.album}</p>
+                                </div>
+                            </div>
+                            <div class="col-span-3 text-gray-300 truncate">${song.artist}</div>
+                            <div class="col-span-2">
+                                <span class="px-2 py-1 bg-blue-500/20 text-blue-400 rounded-full text-xs">${song.genre}</span>
+                            </div>
+                            <div class="col-span-1 text-gray-400 text-sm">${song.duration}</div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            populatePlaylistsSection() {
+                const container = document.getElementById('playlistsGrid');
+                const playlists = [
+                    { name: 'Favorites', songs: 24, duration: '1h 32m', color: 'red' },
+                    { name: 'Workout Mix', songs: 18, duration: '1h 15m', color: 'orange' },
+                    { name: 'Chill Vibes', songs: 31, duration: '2h 8m', color: 'blue' },
+                    { name: 'Road Trip', songs: 42, duration: '2h 45m', color: 'green' },
+                    { name: 'Late Night Jazz', songs: 15, duration: '1h 22m', color: 'purple' },
+                    { name: 'Indie Discovery', songs: 28, duration: '1h 58m', color: 'pink' }
+                ];
+
+                container.innerHTML = playlists.map(playlist => `
+                    <div class="library-card glass-effect rounded-2xl p-6 cursor-pointer" onclick="openPlaylist('${playlist.name}')">
+                        <div class="playlist-cover w-full aspect-square rounded-xl mb-4" style="background: linear-gradient(45deg, var(--tw-gradient-stops));" class="bg-${playlist.color}-500">
+                            <span>🎵</span>
+                        </div>
+                        <h4 class="font-semibold text-white mb-2">${playlist.name}</h4>
+                        <p class="text-gray-400 text-sm">${playlist.songs} songs • ${playlist.duration}</p>
+                        <div class="mt-4 flex items-center justify-between">
+                            <button class="text-blue-400 hover:text-blue-300 text-sm">Play</button>
+                            <button class="text-gray-400 hover:text-white" onclick="event.stopPropagation(); editPlaylist('${playlist.name}')">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            populateArtistsSection() {
+                const container = document.getElementById('artistsGrid');
+                if (!window.app || !window.app.musicCatalog) {
+                    container.innerHTML = this.renderEmptyState('No artists in your library yet');
+                    return;
+                }
+
+                const artists = [...new Set(window.app.musicCatalog.map(song => song.artist))];
+                const artistData = artists.map(artist => {
+                    const songs = window.app.musicCatalog.filter(s => s.artist === artist);
+                    return { name: artist, songs: songs.length, image: songs[0].cover };
+                });
+
+                container.innerHTML = artistData.map(artist => `
+                    <div class="library-card glass-effect rounded-2xl p-6 text-center cursor-pointer">
+                        <img src="${artist.image}" alt="${artist.name}" class="w-20 h-20 rounded-full mx-auto mb-4 object-cover">
+                        <h4 class="font-semibold text-white mb-2 truncate">${artist.name}</h4>
+                        <p class="text-gray-400 text-sm">${artist.songs} songs</p>
+                        <button class="mt-4 w-full px-4 py-2 bg-blue-500 hover:bg-blue-600 rounded-lg text-white text-sm font-medium transition-colors">
+                            View Artist
+                        </button>
+                    </div>
+                `).join('');
+            }
+
+            populateHistorySection() {
+                const container = document.getElementById('historyList');
+                if (!window.app || !window.app.recentlyPlayed || window.app.recentlyPlayed.length === 0) {
+                    container.innerHTML = this.renderEmptyState('No recently played songs');
+                    return;
+                }
+
+                const history = window.app.recentlyPlayed;
+                container.innerHTML = history.map((song, index) => `
+                    <div class="song-row p-4" onclick="window.app.playTrack(${song.id})">
+                        <div class="grid grid-cols-12 gap-4 items-center">
+                            <div class="col-span-1 text-gray-400 text-sm">${index + 1}</div>
+                            <div class="col-span-5 flex items-center space-x-3">
+                                <img src="${song.cover}" alt="${song.title}" class="w-10 h-10 rounded object-cover">
+                                <div class="min-w-0">
+                                    <h4 class="text-white font-medium truncate">${song.title}</h4>
+                                    <p class="text-gray-400 text-sm truncate">${song.album}</p>
+                                </div>
+                            </div>
+                            <div class="col-span-3 text-gray-300 truncate">${song.artist}</div>
+                            <div class="col-span-2 text-gray-400 text-sm">${this.getTimeAgo()}</div>
+                            <div class="col-span-1 text-gray-400 text-sm">${song.duration}</div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            renderEmptyState(message) {
+                return `
+                    <div class="empty-state text-center py-12">
+                        <div class="text-6xl mb-4">🎵</div>
+                        <h4 class="text-xl font-semibold text-white mb-2">${message}</h4>
+                        <p class="text-gray-400">Start exploring music to build your collection</p>
+                        <a href="discover.html" class="inline-block mt-4 px-6 py-2 bg-blue-500 hover:bg-blue-600 rounded-lg text-white font-medium transition-colors">
+                            Discover Music
+                        </a>
+                    </div>
+                `;
+            }
+
+            getTimeAgo() {
+                const times = ['2m ago', '5m ago', '15m ago', '1h ago', '3h ago', 'yesterday'];
+                return times[Math.floor(Math.random() * times.length)];
+            }
+
+            initializeCharts() {
+                // Genre Distribution Chart
+                const genreChart = echarts.init(document.getElementById('genreChart'));
+                const genreData = [
+                    { name: 'Jazz', value: 35 },
+                    { name: 'Electronic', value: 25 },
+                    { name: 'Indie Rock', value: 20 },
+                    { name: 'Classical', value: 12 },
+                    { name: 'Hip Hop', value: 8 }
+                ];
+
+                genreChart.setOption({
+                    backgroundColor: 'transparent',
+                    tooltip: {
+                        trigger: 'item',
+                        backgroundColor: '#1a1d29',
+                        borderColor: '#00d4ff',
+                        textStyle: { color: '#f8f9fa' }
+                    },
+                    series: [{
+                        type: 'pie',
+                        radius: ['40%', '70%'],
+                        data: genreData,
+                        itemStyle: {
+                            borderRadius: 8,
+                            borderColor: '#1a1d29',
+                            borderWidth: 2
+                        },
+                        label: {
+                            color: '#f8f9fa',
+                            fontSize: 12
+                        },
+                        emphasis: {
+                            itemStyle: {
+                                shadowBlur: 10,
+                                shadowOffsetX: 0,
+                                shadowColor: 'rgba(0, 212, 255, 0.5)'
+                            }
+                        }
+                    }],
+                    color: ['#00d4ff', '#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4']
+                });
+
+                // Listening Time Chart
+                const timeChart = echarts.init(document.getElementById('timeChart'));
+                const timeData = {
+                    categories: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                    values: [2.5, 3.2, 1.8, 4.1, 3.7, 5.2, 4.8]
+                };
+
+                timeChart.setOption({
+                    backgroundColor: 'transparent',
+                    tooltip: {
+                        trigger: 'axis',
+                        backgroundColor: '#1a1d29',
+                        borderColor: '#00d4ff',
+                        textStyle: { color: '#f8f9fa' }
+                    },
+                    xAxis: {
+                        type: 'category',
+                        data: timeData.categories,
+                        axisLine: { lineStyle: { color: '#4a5568' } },
+                        axisLabel: { color: '#a0aec0' }
+                    },
+                    yAxis: {
+                        type: 'value',
+                        axisLine: { lineStyle: { color: '#4a5568' } },
+                        axisLabel: { color: '#a0aec0' },
+                        splitLine: { lineStyle: { color: '#2d3748' } }
+                    },
+                    series: [{
+                        data: timeData.values,
+                        type: 'bar',
+                        itemStyle: {
+                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                { offset: 0, color: '#00d4ff' },
+                                { offset: 1, color: '#0099cc' }
+                            ]),
+                            borderRadius: [4, 4, 0, 0]
+                        },
+                        emphasis: {
+                            itemStyle: {
+                                color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                    { offset: 0, color: '#ff6b6b' },
+                                    { offset: 1, color: '#ff5252' }
+                                ])
+                            }
+                        }
+                    }]
+                });
+
+                // Make charts responsive
+                window.addEventListener('resize', () => {
+                    genreChart.resize();
+                    timeChart.resize();
+                });
+            }
+        }
+
+        // Utility functions
+        function createPlaylist() {
+            const name = prompt('Enter playlist name:');
+            if (name) {
+                alert(`Playlist "${name}" created successfully!`);
+                // In a real app, this would create the playlist
+            }
+        }
+
+        function importMusic() {
+            alert('Import feature coming soon!');
+        }
+
+        function exportLibrary() {
+            alert('Export feature coming soon!');
+        }
+
+        function openPlaylist(name) {
+            alert(`Opening playlist: ${name}`);
+        }
+
+        function editPlaylist(name) {
+            alert(`Editing playlist: ${name}`);
+        }
+
+        function clearHistory() {
+            if (confirm('Are you sure you want to clear your listening history?')) {
+                alert('History cleared!');
+                // In a real app, this would clear the history
+            }
+        }
+
+        // Initialize library page when DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            // Wait for main app to initialize
+            setTimeout(() => {
+                window.libraryPage = new LibraryPage();
+            }, 100);
+        });
+    </script>
+    <script src="main.js"></script>
+</body>
+</html>

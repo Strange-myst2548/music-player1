@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Discover Music - StreamFlow</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@splidejs/splide@4.1.4/dist/js/splide.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/@splidejs/splide@4.1.4/dist/css/splide.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+        body { 
+            background: #1a1d29; 
+            color: #f8f9fa; 
+            overflow-x: hidden;
+        }
+        .hero-bg {
+            background: linear-gradient(135deg, #1a1d29 0%, #2c3e50 100%);
+            position: relative;
+        }
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .genre-card {
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+        .genre-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 20px 40px rgba(0, 212, 255, 0.3);
+        }
+        .genre-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            transform: translateX(-100%);
+            transition: transform 0.6s ease;
+        }
+        .genre-card:hover::before {
+            transform: translateX(100%);
+        }
+        .artist-card {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .artist-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
+        }
+        .artist-image {
+            transition: all 0.3s ease;
+        }
+        .artist-card:hover .artist-image {
+            transform: scale(1.1);
+        }
+        .nav-link {
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        .nav-link:hover {
+            color: #00d4ff;
+        }
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: #00d4ff;
+            transition: width 0.3s ease;
+        }
+        .nav-link:hover::after {
+            width: 100%;
+        }
+        .nav-link.active {
+            color: #00d4ff;
+        }
+        .nav-link.active::after {
+            width: 100%;
+        }
+        .trending-badge {
+            background: linear-gradient(45deg, #ff6b6b, #ff8e8e);
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+        .filter-chip {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .filter-chip:hover {
+            background: rgba(0, 212, 255, 0.2);
+            transform: translateY(-2px);
+        }
+        .filter-chip.active {
+            background: #00d4ff;
+            color: #1a1d29;
+        }
+        .discovery-feed {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        .discovery-feed::-webkit-scrollbar {
+            width: 6px;
+        }
+        .discovery-feed::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+        }
+        .discovery-feed::-webkit-scrollbar-thumb {
+            background: #00d4ff;
+            border-radius: 3px;
+        }
+        .mood-card {
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+        }
+        .mood-card:hover {
+            transform: scale(1.05);
+        }
+        .mood-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .mood-card:hover .mood-overlay {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="fixed top-0 left-0 right-0 z-50 glass-effect">
+        <div class="max-w-7xl mx-auto px-6 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-8">
+                    <h1 class="text-2xl font-bold text-white">StreamFlow</h1>
+                    <div class="hidden md:flex space-x-6">
+                        <a href="index.html" class="nav-link text-gray-300">Player</a>
+                        <a href="discover.html" class="nav-link active text-white font-medium">Discover</a>
+                        <a href="library.html" class="nav-link text-gray-300">Library</a>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div class="relative">
+                        <input 
+                            type="text" 
+                            id="discoverSearch"
+                            placeholder="Search artists, genres..."
+                            class="bg-white/10 text-white placeholder-gray-400 rounded-full px-6 py-2 w-64 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                        >
+                        <div id="discoverSearchResults" class="absolute top-full mt-2 left-0 right-0 bg-gray-800 rounded-lg shadow-xl hidden z-50 max-h-96 overflow-y-auto">
+                        </div>
+                    </div>
+                    <button class="w-10 h-10 rounded-full bg-gradient-to-r from-blue-400 to-purple-500 flex items-center justify-center">
+                        <span class="text-white font-medium">U</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero-bg pt-24 pb-16">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="text-center mb-12">
+                <h2 class="text-5xl font-bold mb-4 text-white">Discover New Music</h2>
+                <p class="text-xl text-gray-300 mb-8">Explore genres, find new artists, and expand your musical horizon</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Genre Explorer -->
+    <section class="py-16">
+        <div class="max-w-7xl mx-auto px-6">
+            <h3 class="text-3xl font-bold mb-8 text-white">Explore by Genre</h3>
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6 mb-12">
+                <div class="genre-card glass-effect rounded-2xl p-6 text-center" data-genre="Jazz">
+                    <div class="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center">
+                        <span class="text-2xl">🎷</span>
+                    </div>
+                    <h4 class="font-semibold text-white">Jazz</h4>
+                    <p class="text-gray-400 text-sm mt-1">Smooth & Sophisticated</p>
+                </div>
+                <div class="genre-card glass-effect rounded-2xl p-6 text-center" data-genre="Electronic">
+                    <div class="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center">
+                        <span class="text-2xl">🎧</span>
+                    </div>
+                    <h4 class="font-semibold text-white">Electronic</h4>
+                    <p class="text-gray-400 text-sm mt-1">Beats & Synthesis</p>
+                </div>
+                <div class="genre-card glass-effect rounded-2xl p-6 text-center" data-genre="Indie Rock">
+                    <div class="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-red-400 to-pink-500 rounded-full flex items-center justify-center">
+                        <span class="text-2xl">🎸</span>
+                    </div>
+                    <h4 class="font-semibold text-white">Indie Rock</h4>
+                    <p class="text-gray-400 text-sm mt-1">Alternative & Raw</p>
+                </div>
+                <div class="genre-card glass-effect rounded-2xl p-6 text-center" data-genre="Classical">
+                    <div class="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-purple-400 to-indigo-500 rounded-full flex items-center justify-center">
+                        <span class="text-2xl">🎼</span>
+                    </div>
+                    <h4 class="font-semibold text-white">Classical</h4>
+                    <p class="text-gray-400 text-sm mt-1">Orchestral & Timeless</p>
+                </div>
+                <div class="genre-card glass-effect rounded-2xl p-6 text-center" data-genre="Hip Hop">
+                    <div class="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-green-400 to-teal-500 rounded-full flex items-center justify-center">
+                        <span class="text-2xl">🎤</span>
+                    </div>
+                    <h4 class="font-semibold text-white">Hip Hop</h4>
+                    <p class="text-gray-400 text-sm mt-1">Rhymes & Beats</p>
+                </div>
+                <div class="genre-card glass-effect rounded-2xl p-6 text-center" data-genre="Blues">
+                    <div class="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-indigo-400 to-blue-500 rounded-full flex items-center justify-center">
+                        <span class="text-2xl">🎵</span>
+                    </div>
+                    <h4 class="font-semibold text-white">Blues</h4>
+                    <p class="text-gray-400 text-sm mt-1">Soulful & Emotional</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Content -->
+    <section class="py-16 bg-gray-900/30">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                
+                <!-- Discovery Feed -->
+                <div class="lg:col-span-2">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-2xl font-bold text-white">New Releases & Trending</h3>
+                        <div class="flex space-x-2">
+                            <span class="filter-chip px-4 py-2 rounded-full text-sm bg-white/10 text-white" data-filter="all">All</span>
+                            <span class="filter-chip px-4 py-2 rounded-full text-sm bg-white/10 text-white" data-filter="new">New</span>
+                            <span class="filter-chip px-4 py-2 rounded-full text-sm bg-white/10 text-white" data-filter="trending">Trending</span>
+                        </div>
+                    </div>
+                    
+                    <div class="discovery-feed space-y-4" id="discoveryFeed">
+                        <!-- Content will be populated by JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Sidebar -->
+                <div class="space-y-8">
+                    
+                    <!-- Artist Spotlight -->
+                    <div class="glass-effect rounded-2xl p-6">
+                        <h3 class="text-xl font-semibold mb-4 text-white">Artist Spotlight</h3>
+                        <div class="space-y-4" id="artistSpotlight">
+                            <!-- Content will be populated by JavaScript -->
+                        </div>
+                    </div>
+
+                    <!-- Mood Playlists -->
+                    <div class="glass-effect rounded-2xl p-6">
+                        <h3 class="text-xl font-semibold mb-4 text-white">Mood Playlists</h3>
+                        <div class="grid grid-cols-2 gap-3" id="moodPlaylists">
+                            <!-- Content will be populated by JavaScript -->
+                        </div>
+                    </div>
+
+                    <!-- Statistics -->
+                    <div class="glass-effect rounded-2xl p-6">
+                        <h3 class="text-xl font-semibold mb-4 text-white">Your Discovery Stats</h3>
+                        <div class="space-y-3" id="discoveryStats">
+                            <div class="flex justify-between">
+                                <span class="text-gray-400">Artists Discovered</span>
+                                <span class="text-white font-medium">47</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-400">New Genres</span>
+                                <span class="text-white font-medium">12</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-400">Songs Added</span>
+                                <span class="text-white font-medium">156</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-400">This Week</span>
+                                <span class="text-blue-400 font-medium">+23</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Player Bar (Shared) -->
+    <div class="fixed bottom-0 left-0 right-0 player-bar z-50" style="background: rgba(26, 29, 41, 0.95); backdrop-filter: blur(20px); border-top: 1px solid rgba(255, 255, 255, 0.1);">
+        <div class="max-w-7xl mx-auto px-6 py-4">
+            <div class="flex items-center justify-between">
+                <!-- Now Playing -->
+                <div class="flex items-center space-x-4 flex-1">
+                    <img id="currentAlbumArt" src="https://via.placeholder.com/60x60/4a5568/ffffff?text=♪" alt="Album Art" class="w-16 h-16 rounded-lg">
+                    <div>
+                        <h4 id="currentSong" class="font-semibold text-white">Select a song to play</h4>
+                        <p id="currentArtist" class="text-gray-400 text-sm">Artist</p>
+                    </div>
+                </div>
+
+                <!-- Player Controls -->
+                <div class="flex items-center space-x-6">
+                    <button id="shuffleBtn" class="text-gray-400 hover:text-white transition-colors">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M3.707 3.293a1 1 0 00-1.414 1.414l1.414-1.414zM15 12a1 1 0 10-2 0 1 1 0 002 0zM5.414 5.414L3.293 3.293 1.879 4.707 4 6.828l1.414-1.414zM7.414 7.414L5.293 5.293 3.879 6.707 6 8.828l1.414-1.414zM9.414 9.414L7.293 7.293 5.879 8.707 8 10.828l1.414-1.414zM11.414 11.414L9.293 9.293 7.879 10.707 10 12.828l1.414-1.414zM13.414 13.414L11.293 11.293 9.879 12.707 12 14.828l1.414-1.414z"/>
+                        </svg>
+                    </button>
+                    <button id="prevBtn" class="text-white hover:text-blue-400 transition-colors">
+                        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M8.445 14.832A1 1 0 0010 14v-2.798l5.445 3.63A1 1 0 0017 14V6a1 1 0 00-1.555-.832L10 8.798V6a1 1 0 00-1.555-.832l-6 4a1 1 0 000 1.664l6 4z"/>
+                        </svg>
+                    </button>
+                    <button id="playPauseBtn" class="w-12 h-12 bg-blue-500 hover:bg-blue-600 rounded-full flex items-center justify-center text-white transition-colors">
+                        <svg id="playIcon" class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M8 5v10l8-5-8-5z"/>
+                        </svg>
+                        <svg id="pauseIcon" class="w-6 h-6 hidden" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M5 4h3v12H5V4zm7 0h3v12h-3V4z"/>
+                        </svg>
+                    </button>
+                    <button id="nextBtn" class="text-white hover:text-blue-400 transition-colors">
+                        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M4.555 5.168A1 1 0 003 6v8a1 1 0 001.555.832L10 11.202V14a1 1 0 001.555.832l6-4a1 1 0 000-1.664l-6-4A1 1 0 0010 6v2.798L4.555 5.168z"/>
+                        </svg>
+                    </button>
+                    <button id="repeatBtn" class="text-gray-400 hover:text-white transition-colors">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Volume and Progress -->
+                <div class="flex items-center space-x-4 flex-1 justify-end">
+                    <span id="currentTime" class="text-gray-400 text-sm">0:00</span>
+                    <div class="w-64 relative">
+                        <div class="h-1 bg-gray-600 rounded-full cursor-pointer" id="progressBar">
+                            <div class="progress-bar h-full rounded-full" id="progressFill" style="width: 0%; background: linear-gradient(90deg, #00d4ff 0%, #ff6b6b 100%);"></div>
+                        </div>
+                    </div>
+                    <span id="totalTime" class="text-gray-400 text-sm">0:00</span>
+                    <div class="flex items-center space-x-2">
+                        <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.617.793L4.828 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.828l3.555-3.793A1 1 0 019.383 3.076zM15 8a1 1 0 011 1v2a1 1 0 01-1 1h-1.5a1 1 0 01-1-1V9a1 1 0 011-1H15z"/>
+                        </svg>
+                        <input type="range" id="volumeSlider" min="0" max="100" value="70" class="w-20 h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Audio Element -->
+    <audio id="audioPlayer" preload="metadata"></audio>
+
+    <script>
+        // Discover page specific functionality
+        class DiscoverPage {
+            constructor() {
+                this.selectedGenre = null;
+                this.currentFilter = 'all';
+                this.initializeDiscover();
+            }
+
+            initializeDiscover() {
+                this.setupGenreCards();
+                this.setupFilterChips();
+                this.setupSearch();
+                this.populateDiscoveryFeed();
+                this.populateArtistSpotlight();
+                this.populateMoodPlaylists();
+            }
+
+            setupGenreCards() {
+                document.querySelectorAll('.genre-card').forEach(card => {
+                    card.addEventListener('click', () => {
+                        const genre = card.dataset.genre;
+                        this.selectGenre(genre);
+                    });
+                });
+            }
+
+            selectGenre(genre) {
+                this.selectedGenre = genre;
+                
+                // Update visual state
+                document.querySelectorAll('.genre-card').forEach(card => {
+                    card.classList.remove('ring-2', 'ring-blue-400');
+                });
+                document.querySelector(`[data-genre="${genre}"]`).classList.add('ring-2', 'ring-blue-400');
+                
+                // Filter discovery feed
+                this.filterDiscoveryFeed();
+                
+                // Animate selection
+                anime({
+                    targets: `[data-genre="${genre}"]`,
+                    scale: [1, 1.1, 1],
+                    duration: 300,
+                    easing: 'easeOutQuad'
+                });
+            }
+
+            setupFilterChips() {
+                document.querySelectorAll('.filter-chip').forEach(chip => {
+                    chip.addEventListener('click', () => {
+                        // Update active state
+                        document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+                        chip.classList.add('active');
+                        
+                        this.currentFilter = chip.dataset.filter;
+                        this.filterDiscoveryFeed();
+                    });
+                });
+            }
+
+            setupSearch() {
+                const searchInput = document.getElementById('discoverSearch');
+                const searchResults = document.getElementById('discoverSearchResults');
+                
+                searchInput.addEventListener('input', (e) => {
+                    const query = e.target.value;
+                    if (query) {
+                        this.performDiscoverSearch(query, searchResults);
+                        searchResults.classList.remove('hidden');
+                    } else {
+                        searchResults.classList.add('hidden');
+                    }
+                });
+                
+                searchInput.addEventListener('blur', () => {
+                    setTimeout(() => searchResults.classList.add('hidden'), 200);
+                });
+            }
+
+            performDiscoverSearch(query, container) {
+                if (!window.app || !window.app.musicCatalog) return;
+                
+                const results = window.app.musicCatalog.filter(track => 
+                    track.artist.toLowerCase().includes(query.toLowerCase()) ||
+                    track.genre.toLowerCase().includes(query.toLowerCase()) ||
+                    track.album.toLowerCase().includes(query.toLowerCase())
+                );
+
+                container.innerHTML = results.map(track => `
+                    <div class="p-3 border-b border-gray-700 last:border-b-0 cursor-pointer hover:bg-gray-700" onclick="window.app.playTrack(${track.id})">
+                        <div class="flex items-center space-x-3">
+                            <img src="${track.cover}" alt="${track.title}" class="w-12 h-12 rounded object-cover">
+                            <div class="flex-1 min-w-0">
+                                <h4 class="text-white font-medium truncate">${track.artist}</h4>
+                                <p class="text-gray-400 text-sm truncate">${track.genre}</p>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            populateDiscoveryFeed() {
+                const feed = document.getElementById('discoveryFeed');
+                const tracks = window.app ? window.app.musicCatalog : [];
+                
+                feed.innerHTML = tracks.map(track => `
+                    <div class="glass-effect rounded-xl p-4 hover:bg-white/20 transition-all duration-300 cursor-pointer" onclick="window.app.playTrack(${track.id})">
+                        <div class="flex items-center space-x-4">
+                            <img src="${track.cover}" alt="${track.album}" class="w-20 h-20 rounded-lg object-cover">
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center space-x-2 mb-1">
+                                    <h4 class="font-semibold text-white truncate">${track.title}</h4>
+                                    ${Math.random() > 0.7 ? '<span class="trending-badge px-2 py-1 rounded-full text-xs text-white">Trending</span>' : ''}
+                                </div>
+                                <p class="text-gray-400 truncate">${track.artist}</p>
+                                <p class="text-gray-500 text-sm">${track.album} • ${track.year}</p>
+                                <div class="flex items-center space-x-2 mt-2">
+                                    <span class="px-2 py-1 bg-blue-500/20 text-blue-400 rounded-full text-xs">${track.genre}</span>
+                                    <span class="text-gray-500 text-xs">${track.duration}</span>
+                                </div>
+                            </div>
+                            <button class="text-blue-400 hover:text-blue-300 p-3 rounded-full hover:bg-blue-400/20 transition-colors">
+                                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M8 5v10l8-5-8-5z"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            filterDiscoveryFeed() {
+                const feedItems = document.querySelectorAll('#discoveryFeed > div');
+                
+                feedItems.forEach(item => {
+                    let show = true;
+                    
+                    if (this.selectedGenre) {
+                        const genreTag = item.querySelector('.px-2.py-1.bg-blue-500\\/20');
+                        if (genreTag && !genreTag.textContent.includes(this.selectedGenre)) {
+                            show = false;
+                        }
+                    }
+                    
+                    if (this.currentFilter === 'trending') {
+                        const trendingBadge = item.querySelector('.trending-badge');
+                        if (!trendingBadge) show = false;
+                    }
+                    
+                    item.style.display = show ? 'block' : 'none';
+                });
+            }
+
+            populateArtistSpotlight() {
+                const container = document.getElementById('artistSpotlight');
+                const artists = [
+                    { name: 'Miles Davis', genre: 'Jazz', image: 'https://kimi-web-img.moonshot.cn/img/www.udiscovermusic.com/b81918ea1f8985cb4b3efbe13d4ac5b2f993b624.jpg' },
+                    { name: 'Aphex Twin', genre: 'Electronic', image: 'https://kimi-web-img.moonshot.cn/img/s3.gomedia.us/8be8f7e023dbd5da16f759263ea3b1f3213c0bfa.jpg' },
+                    { name: 'Radiohead', genre: 'Indie Rock', image: 'https://kimi-web-img.moonshot.cn/img/i.ebayimg.com/e886a3a0003d4c5e80e8e1df07ad809627539bff.jpg' }
+                ];
+                
+                container.innerHTML = artists.map(artist => `
+                    <div class="artist-card flex items-center space-x-3 p-3 rounded-lg hover:bg-white/10 transition-colors cursor-pointer">
+                        <img src="${artist.image}" alt="${artist.name}" class="artist-image w-12 h-12 rounded-full object-cover">
+                        <div class="flex-1 min-w-0">
+                            <h4 class="text-white font-medium truncate">${artist.name}</h4>
+                            <p class="text-gray-400 text-sm truncate">${artist.genre}</p>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            populateMoodPlaylists() {
+                const container = document.getElementById('moodPlaylists');
+                const moods = [
+                    { name: 'Focus', color: 'blue', icon: '🎯' },
+                    { name: 'Energy', color: 'orange', icon: '⚡' },
+                    { name: 'Chill', color: 'green', icon: '🌿' },
+                    { name: 'Workout', color: 'red', icon: '💪' }
+                ];
+                
+                container.innerHTML = moods.map(mood => `
+                    <div class="mood-card relative rounded-lg overflow-hidden bg-gradient-to-br from-${mood.color}-500 to-${mood.color}-600 p-4 text-center cursor-pointer">
+                        <div class="mood-overlay"></div>
+                        <div class="relative z-10">
+                            <div class="text-2xl mb-2">${mood.icon}</div>
+                            <h4 class="text-white font-medium text-sm">${mood.name}</h4>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        // Initialize discover page when DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            // Wait for main app to initialize
+            setTimeout(() => {
+                window.discoverPage = new DiscoverPage();
+            }, 100);
+        });
+    </script>
+    <script src="main.js"></script>
+</body>
+</html>
